@@ -3,9 +3,9 @@ FROM debian:buster-slim
 RUN groupadd --gid 1000 node \
   && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
 
-ENV NODE_VERSION 10.15.3
+ENV NODE_VERSION 10.16.3
 
-RUN buildDeps='xz-utils' \
+RUN buildDeps='xz-utils build-essential' \
     && ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
       amd64) ARCH='x64';; \
@@ -17,7 +17,10 @@ RUN buildDeps='xz-utils' \
       *) echo "unsupported architecture"; exit 1 ;; \
     esac \
     && set -ex \
-    && apt-get update && apt-get install -y ca-certificates curl wget gnupg dirmngr gdal-bin $buildDeps --no-install-recommends \
+    && apt-get update && apt-get install -y ca-certificates curl wget gnupg dirmngr $buildDeps --no-install-recommends \
+    && wget https://download.osgeo.org/gdal/2.4.2/gdal-2.4.2.tar.gz \
+    && tar xf gdal-2.4.2.tar.gz \
+    && cd gdal-2.4.2 && ./configure && make && make install && cd .. \
     && rm -rf /var/lib/apt/lists/* \
     && for key in \
       94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
@@ -45,7 +48,7 @@ RUN buildDeps='xz-utils' \
     && apt-get purge -y --auto-remove $buildDeps \
     && ln -s /usr/local/bin/node /usr/local/bin/nodejs
 
-ENV YARN_VERSION 1.13.0
+ENV YARN_VERSION 1.17.3
 
 RUN set -ex \
   && for key in \
@@ -63,5 +66,8 @@ RUN set -ex \
   && ln -s /opt/yarn-v$YARN_VERSION/bin/yarn /usr/local/bin/yarn \
   && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
   && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz
+
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 CMD [ "node" ]
